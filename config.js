@@ -1,3 +1,4 @@
-// Supabase bilgilerini buraya yaz.
-const SUPABASE_URL = "BURAYA_SUPABASE_URL";
-const SUPABASE_PUBLISHABLE_KEY = "BURAYA_SUPABASE_PUBLISHABLE_KEY";
+// Supabase bilgileri
+const SUPABASE_URL = "https://klnzhrgdskbusttxvfwu.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY = "BURAYA_KOPYALADIĞIN_PUBLISHABLE_KEY";
