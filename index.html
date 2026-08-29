@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Para Koleksiyonum</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:#f3f4f6;color:#111827}
+button,input,select{font:inherit}
+.hidden{display:none!important}
+.container{max-width:1000px;margin:auto;padding:20px}
+header{background:#111827;color:#fff;padding:24px;border-radius:18px;margin-bottom:18px}
+header h1{margin:0 0 5px;font-size:28px}
+header p{margin:0;color:#d1d5db}
+.card{background:#fff;border-radius:18px;padding:18px;margin-bottom:18px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+.auth{max-width:440px;margin:70px auto}
+.tabs{display:flex;gap:8px;margin-bottom:15px}
+.tabs button{background:#e5e7eb;color:#111827}
+.tabs button.active{background:#111827;color:white}
+input,select,button{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px}
+button{background:#111827;color:white;border:0;cursor:pointer}
+button:hover{opacity:.9}
+.form{display:grid;gap:10px}
+.grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px}
+.search{display:grid;grid-template-columns:1fr 200px;gap:10px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.user{color:#6b7280;font-size:14px}
+.logout{width:auto;background:#374151;padding:9px 14px}
+.stats{display:flex;gap:12px;margin-bottom:18px}
+.stat{background:#fff;padding:15px 18px;border-radius:15px;flex:1;box-shadow:0 4px 18px rgba(0,0,0,.05)}
+.stat strong{display:block;font-size:25px;margin-top:3px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:13px 10px;border-bottom:1px solid #e5e7eb}
+th{font-size:13px;color:#6b7280}
+.delete{background:#dc2626;width:auto;padding:8px 10px}
+.message{padding:10px 12px;border-radius:10px;background:#f3f4f6;color:#374151;font-size:14px}
+.small{font-size:13px;color:#6b7280;line-height:1.5}
+@media(max-width:700px){
+ .grid,.search{grid-template-columns:1fr}
+ .stats{flex-direction:column}
+ .topbar{align-items:flex-start;flex-direction:column}
+ table{font-size:14px}
+ th:nth-child(3),td:nth-child(3){display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="authScreen" class="container">
+  <div class="card auth">
+    <h1>🪙 Para Koleksiyonum</h1>
+    <p>Üyelik oluştur, koleksiyonunu hesabında sakla.</p>
+    <div class="tabs">
+      <button id="loginTab" class="active" type="button">Giriş Yap</button>
+      <button id="signupTab" type="button">Üye Ol</button>
+    </div>
+
+    <form id="authForm" class="form">
+      <input id="name" class="hidden" placeholder="Adınız">
+      <input id="email" type="email" placeholder="E-posta" required>
+      <input id="password" type="password" placeholder="Şifre" minlength="6" required>
+      <button id="authSubmit" type="submit">Giriş Yap</button>
+    </form>
+    <div id="authMessage" class="message hidden" style="margin-top:12px"></div>
+    <p class="small" style="margin-top:14px">Hesabın ve koleksiyon kayıtların birbirinden ayrı tutulur.</p>
+  </div>
+</div>
+
+<div id="appScreen" class="hidden">
+<div class="container">
+
+  <div class="topbar">
+    <div>
+      <h2 style="margin:0">🪙 Para Koleksiyonum</h2>
+      <div id="userEmail" class="user"></div>
+    </div>
+    <button id="logoutBtn" class="logout" type="button">Çıkış Yap</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span>Toplam Para</span><strong id="count">0</strong></div>
+    <div class="stat"><span>Ülke Sayısı</span><strong id="countries">0</strong></div>
+  </div>
+
+  <div class="card">
+    <h3>Para Ekle</h3>
+    <form id="coinForm" class="grid">
+      <select id="country" required><option value="">Ülke seç</option></select>
+      <input id="year" type="number" min="0" max="9999" placeholder="Yıl" required>
+      <input id="value" placeholder="Değer" required>
+      <input id="unit" placeholder="Birim" required>
+      <button type="submit">Ekle</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="search">
+      <input id="search" placeholder="Ülke, yıl, değer veya birim ara...">
+      <select id="filterCountry"><option value="">Tüm ülkeler</option></select>
+    </div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>Ülke</th><th>Yıl</th><th>Değer</th><th>Birim</th><th></th></tr></thead>
+      <tbody id="coinList"></tbody>
+    </table>
+    <div id="empty" class="message" style="margin-top:12px;text-align:center">Henüz para eklenmedi.</div>
+  </div>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+const { createClient } = supabase;
+const client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+const countries = ["Afganistan","Almanya","Amerika Birleşik Devletleri","Andorra","Angola","Antigua ve Barbuda","Arjantin","Arnavutluk","Avustralya","Avusturya","Azerbaycan","Bahamalar","Bahreyn","Bangladeş","Barbados","Belarus","Belçika","Belize","Benin","Bhutan","Birleşik Arap Emirlikleri","Birleşik Krallık","Bolivya","Bosna-Hersek","Botsvana","Brezilya","Brunei","Bulgaristan","Cezayir","Cibuti","Çad","Çekya","Çin","Danimarka","Dominika","Dominik Cumhuriyeti","Ekvador","Ekvator Ginesi","El Salvador","Endonezya","Eritre","Ermenistan","Estonya","Etiyopya","Fas","Fiji","Filipinler","Finlandiya","Fransa","Gabon","Gambiya","Gana","Gine","Gine-Bissau","Guyana","Güney Afrika","Güney Kore","Gürcistan","Haiti","Hindistan","Hollanda","Honduras","Irak","İran","İrlanda","İspanya","İsrail","İsveç","İsviçre","İtalya","İzlanda","Jamaika","Japonya","Kamboçya","Kamerun","Kanada","Karadağ","Katar","Kazakistan","Kenya","Kırgızistan","Kıbrıs","Kolombiya","Komorlar","Kosta Rika","Kuveyt","Kuzey Kore","Küba","Laos","Lesotho","Letonya","Liberya","Libya","Lihtenştayn","Litvanya","Lübnan","Lüksemburg","Madagaskar","Malavi","Maldivler","Malezya","Mali","Malta","Meksika","Mısır","Moğolistan","Moldova","Monako","Moritanya","Mozambik","Myanmar","Namibya","Nepal","Nijer","Nijerya","Nikaragua","Norveç","Özbekistan","Pakistan","Palau","Panama","Papua Yeni Gine","Paraguay","Peru","Polonya","Portekiz","Romanya","Ruanda","Rusya","Saint Lucia","Samoa","San Marino","Senegal","Seyşeller","Sırbistan","Sierra Leone","Singapur","Slovakya","Slovenya","Somali","Sri Lanka","Sudan","Surinam","Suriye","Suudi Arabistan","Şili","Tacikistan","Tanzanya","Tayland","Togo","Tonga","Trinidad ve Tobago","Tunus","Tuvalu","Türkiye","Türkmenistan","Uganda","Ukrayna","Umman","Uruguay","Vanuatu","Vatikan","Venezuela","Vietnam","Yemen","Yeni Zelanda","Yunanistan","Zambiya","Zimbabve"].sort((a,b)=>a.localeCompare(b,'tr'));
+
+countries.forEach(c=>{
+  country.insertAdjacentHTML("beforeend",`<option>${c}</option>`);
+  filterCountry.insertAdjacentHTML("beforeend",`<option>${c}</option>`);
+});
+
+let coins=[];
+
+const authScreen=document.getElementById("authScreen");
+const appScreen=document.getElementById("appScreen");
+const authForm=document.getElementById("authForm");
+const authSubmit=document.getElementById("authSubmit");
+const authMessage=document.getElementById("authMessage");
+let mode="login";
+
+function showAuthMessage(text){
+  authMessage.textContent=text;
+  authMessage.classList.remove("hidden");
+}
+function clearAuthMessage(){authMessage.classList.add("hidden");}
+
+loginTab.onclick=()=>{
+  mode="login"; loginTab.classList.add("active"); signupTab.classList.remove("active");
+  name.classList.add("hidden"); name.required=false; authSubmit.textContent="Giriş Yap"; clearAuthMessage();
+};
+signupTab.onclick=()=>{
+  mode="signup"; signupTab.classList.add("active"); loginTab.classList.remove("active");
+  name.classList.remove("hidden"); name.required=true; authSubmit.textContent="Üye Ol"; clearAuthMessage();
+};
+
+authForm.addEventListener("submit",async e=>{
+  e.preventDefault(); clearAuthMessage();
+  const email=document.getElementById("email").value.trim();
+  const password=document.getElementById("password").value;
+  if(mode==="signup"){
+    const fullName=document.getElementById("name").value.trim();
+    const {data,error}=await client.auth.signUp({
+      email,password,
+      options:{data:{full_name:fullName}, emailRedirectTo:location.origin}
+    });
+    if(error){showAuthMessage(error.message);return;}
+    if(data.session){
+      showApp(data.session.user);
+    }else{
+      showAuthMessage("Kayıt oluşturuldu. E-posta doğrulaması açıksa gelen kutundaki bağlantıya tıklayın.");
+    }
+  }else{
+    const {data,error}=await client.auth.signInWithPassword({email,password});
+    if(error){showAuthMessage(error.message);return;}
+    showApp(data.user);
+  }
+});
+
+async function loadCoins(){
+  const {data,error}=await client.from("coins").select("id,country,year,value,unit").order("year",{ascending:true});
+  if(error){showAuthMessage(error.message);return;}
+  coins=data||[]; render();
+}
+async function showApp(user){
+  authScreen.classList.add("hidden");
+  appScreen.classList.remove("hidden");
+  document.getElementById("userEmail").textContent=user.email;
+  await loadCoins();
+}
+function showLogin(){
+  appScreen.classList.add("hidden");
+  authScreen.classList.remove("hidden");
+}
+function render(){
+  const q=document.getElementById("search").value.toLocaleLowerCase("tr-TR");
+  const fc=filterCountry.value;
+  const rows=coins.filter(c=>{
+    const text=`${c.country} ${c.year} ${c.value} ${c.unit}`.toLocaleLowerCase("tr-TR");
+    return (!q||text.includes(q))&&(!fc||c.country===fc);
+  });
+  coinList.innerHTML=rows.map(c=>`
+    <tr>
+      <td>${escapeHtml(c.country)}</td>
+      <td>${escapeHtml(c.year)}</td>
+      <td>${escapeHtml(c.value)}</td>
+      <td>${escapeHtml(c.unit)}</td>
+      <td><button type="button" class="delete" data-id="${c.id}">Sil</button></td>
+    </tr>`).join("");
+  empty.style.display=rows.length?"none":"block";
+  count.textContent=coins.length;
+  countriesEl=document.getElementById("countries");
+  countriesEl.textContent=new Set(coins.map(c=>c.country)).size;
+}
+function escapeHtml(v){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+
+document.getElementById("coinForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const user=(await client.auth.getUser()).data.user;
+  if(!user){showLogin();return;}
+  const item={
+    user_id:user.id,
+    country:country.value,
+    year:Number(document.getElementById("year").value),
+    value:document.getElementById("value").value.trim(),
+    unit:document.getElementById("unit").value.trim()
+  };
+  const {data,error}=await client.from("coins").insert(item).select("id,country,year,value,unit").single();
+  if(error){alert(error.message);return;}
+  coins.push(data);
+  e.target.reset(); render();
+});
+
+document.getElementById("coinList").addEventListener("click",async e=>{
+  const btn=e.target.closest(".delete"); if(!btn)return;
+  const {error}=await client.from("coins").delete().eq("id",btn.dataset.id);
+  if(error){alert(error.message);return;}
+  coins=coins.filter(c=>String(c.id)!==String(btn.dataset.id));
+  render();
+});
+
+document.getElementById("logoutBtn").onclick=async()=>{
+  await client.auth.signOut();
+  coins=[]; showLogin();
+};
+
+document.getElementById("search").addEventListener("input",render);
+filterCountry.addEventListener("change",render);
+
+client.auth.onAuthStateChange(async (event,session)=>{
+  if(session){showApp(session.user);}
+  else{showLogin();}
+});
+
+(async()=>{
+  const {data}=await client.auth.getSession();
+  if(data.session) showApp(data.session.user); else showLogin();
+})();
+</script>
+</body>
+</html>

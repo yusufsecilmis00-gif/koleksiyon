@@ -1,0 +1,3 @@
+// Supabase bilgilerini buraya yaz.
+const SUPABASE_URL = "BURAYA_SUPABASE_URL";
+const SUPABASE_PUBLISHABLE_KEY = "BURAYA_SUPABASE_PUBLISHABLE_KEY";
